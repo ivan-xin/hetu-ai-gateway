@@ -1,21 +1,7 @@
 from enum import Enum
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
-
-
-class FinetuneProviderModel(BaseModel):
-    """Finetune provider model: a model a provider supports for fine-tuning"""
-
-    name: str
-    id: str
-
-class FinetuneProvider(BaseModel):
-    """Finetune provider: list of models a provider supports for fine-tuning"""
-
-    name: str
-    id: str
-    enabled: bool
-    models: list[FinetuneProviderModel]
+from datetime import datetime
 
 class FineTunePlatform(str, Enum):
     FIREWORKS_AI = "fireworks_ai"
@@ -27,32 +13,82 @@ class FineTuneStatus(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
 
-class FineTuneJob(BaseModel):
+class FineTuneParameter(BaseModel):
+    name: str
+    type: str
+    description: str
+    optional: bool = True
+
+class FinetuneProviderModel(BaseModel):
+    name: str
     id: str
+
+class FinetuneProvider(BaseModel):
+    name: str
+    id: str
+    enabled: bool
+    models: List[FinetuneProviderModel]
+
+class FineTuneJobBase(BaseModel):
     name: str
     provider: FineTunePlatform
     model_name: str
     dataset_path: str
-    parameters: Dict[str, Any]
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+    description: Optional[str] = None
+    system_message: str = "You are a helpful assistant."
+    thinking_instructions: Optional[str] = None
+
+class FineTuneJobCreate(FineTuneJobBase):
+    pass
+
+class FineTuneJob(FineTuneJobBase):
+    id: str
     status: FineTuneStatus = FineTuneStatus.PENDING
     provider_job_id: Optional[str] = None
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
     error_message: Optional[str] = None
-    status_message: Optional[str] = None  
+    status_message: Optional[str] = None
     metrics: Dict[str, Any] = Field(default_factory=dict)
-    fine_tuned_model: Optional[str] = None  # Make this optional
-    description: Optional[str] = None  
+    fine_tuned_model: Optional[str] = None
 
-class FineTuneRequest(BaseModel):
-    model_name: str
-    provider: str
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+
+class FineTuneJobUpdate(BaseModel):
+    status: Optional[FineTuneStatus] = None
+    provider_job_id: Optional[str] = None
+    error_message: Optional[str] = None
+    status_message: Optional[str] = None
+    metrics: Optional[Dict[str, Any]] = None
+    fine_tuned_model: Optional[str] = None
+
+class DatasetFormatRequest(BaseModel):
     dataset_path: str
-    hyperparameters: Optional[Dict[str, Any]] = None
-    description: Optional[str] = None
+    split_name: str = "train"
+    format_type: str
+    data_strategy: str
+    system_message: str = "You are a helpful assistant."
+    thinking_instructions: Optional[str] = None
 
-class FineTuneJobCreate(BaseModel):
-    name: str
-    provider: FineTunePlatform
-    model_name: str
-    parameters: Dict[str, Any] = Field(default_factory=dict)
+# 响应模型
+class ProviderListResponse(BaseModel):
+    providers: Dict[str, str]
+
+class ParameterListResponse(BaseModel):
+    parameters: List[Dict[str, Any]]
+
+class ModelListResponse(BaseModel):
+    providers: List[FinetuneProvider]
+
+class JobResponse(BaseModel):
+    job: FineTuneJob
+
+class JobListResponse(BaseModel):
+    jobs: List[FineTuneJob]
+
+class DatasetFormatResponse(BaseModel):
+    output_path: str
