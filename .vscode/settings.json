@@ -1,0 +1,7 @@
+{
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/venv/lib/python3.13/site-packages",
+        "${workspaceFolder}/venv/lib/site-packages"
+    ],
+    "python.linting.enabled": true
+}
