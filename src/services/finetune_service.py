@@ -176,7 +176,6 @@ class FineTuneService:
             self._save_job(job)
             
             # 创建数据集分割对象
-            # dataset = DatasetSplit(path=job.dataset_path)
             dataset = DatasetSplit.load_from_file(Path(job.dataset_path))
 
             # 使用静态方法创建适配器和微调模型
@@ -413,4 +412,4 @@ class FineTuneService:
             return output_path
         except Exception as e:
             logger.error(f"Error formatting dataset: {e}")
-            raise
+            raise ValueError(f"Error formatting dataset: {e}")
