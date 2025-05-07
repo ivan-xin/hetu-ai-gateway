@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 
-from ..models.finetune import FineTuneJob, FineTunePlatform
+from .finetune import FineTuneJob, FineTunePlatform
 
 class FineTuneParameterSchema(BaseModel):
     name: str
