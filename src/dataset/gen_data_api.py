@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any
 
 from kiln_ai.datamodel import PromptId, TaskRun
 
-from ..services.gen_data_service import DataGenService
+from .gen_data_service import DataGenService
 
 router = APIRouter(prefix="/api", tags=["data_generation"])
 

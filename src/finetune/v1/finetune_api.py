@@ -4,15 +4,15 @@ from fastapi.responses import FileResponse, StreamingResponse
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
-from ..services.finetune_service import FineTuneService
-from ..models.finetune import (
+from .finetune_service import FineTuneService
+from .finetune import (
     FineTunePlatform, FineTuneStatus, FineTuneJobCreate, 
     FineTuneJob, DatasetFormatRequest, FinetuneProvider,
     ProviderListResponse, ParameterListResponse, ModelListResponse,
     JobResponse, JobListResponse, DatasetFormatResponse
 )
 
-from ..config import AppConfig
+from ...config import AppConfig
 
 
 router = APIRouter(prefix="/api/finetune", tags=["finetune"])

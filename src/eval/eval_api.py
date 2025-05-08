@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from kiln_ai.datamodel.task import RunConfigProperties, TaskRunConfig
 from kiln_ai.datamodel.eval import Eval, EvalConfig
 
-from ..models.eval import (
+from .eval import (
     CreateEvaluatorRequest,
     CreateEvalConfigRequest,
     CreateTaskRunConfigRequest,
@@ -14,7 +14,7 @@ from ..models.eval import (
     RunEvalConfigRequest,
     UpdateEvalRequest,
 )
-from ..services.eval_service import EvalService
+from .eval_service import EvalService
 
 router = APIRouter(tags=["evaluations"])
 

@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 
-from ..models.project import (
+from .project import (
     ProjectCreate, ProjectUpdate, ProjectImport,
     ProjectResponse, ProjectListResponse, ProjectDeleteResponse
 )
-from ..services.project_service import ProjectService
+from .project_service import ProjectService
 from kiln_ai.datamodel import Project
 
 router = APIRouter(prefix="/api", tags=["projects"])

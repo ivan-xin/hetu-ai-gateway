@@ -21,12 +21,12 @@ from kiln_ai.adapters.provider_tools import (
 from kiln_ai.datamodel import DatasetSplit, Finetune, FineTuneStatusType, FinetuneDataStrategy
 from kiln_ai.adapters.fine_tune.dataset_formatter import DatasetFormat, DatasetFormatter
 
-from ..models.finetune import (
+from .finetune import (
     FineTuneJob, FinetuneProviderModel, FinetuneProvider, 
     FineTunePlatform, FineTuneStatus as JobStatus,
     FineTuneJobCreate, FineTuneJobUpdate,DatasetFormatRequest
 )
-from ..config import AppConfig
+from ...config import AppConfig
 
 logger = logging.getLogger(__name__)
 

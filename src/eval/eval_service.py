@@ -31,7 +31,7 @@ from kiln_ai.datamodel.task_output import normalize_rating
 from kiln_ai.utils.name_generator import generate_memorable_name
 from kiln_server.task_api import task_from_id
 
-from ..models.eval import (
+from .eval import (
     ScoreSummary,
     EvalRunResult,
     EvalResultSummary,
