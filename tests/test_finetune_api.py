@@ -25,22 +25,22 @@ from kiln_ai.datamodel.dataset_split import (
 )
 from pydantic import BaseModel
 
-from ..src.finetune.v1.finetune import (
+from src.finetune.v2.finetune_model import (
     CreateDatasetSplitRequest,
     CreateFinetuneRequest,
     DatasetSplitType,
     FinetuneProviderModel,
-    connect_fine_tune_api,
-    fetch_fireworks_finetune_models,
-    thinking_instructions_from_request,
 )
+from src.finetune.v2.finetune_api import connect_fine_tune_api
+from src.finetune.v2.finetune_service import FinetuneService
 
+from kiln_ai.adapters.ml_model_list import ModelProviderName
 
 @pytest.fixture
 def test_task(tmp_path):
     project_path = tmp_path / "project.kiln"
 
-    project = Project(name="Test Project", path=str(project_path))
+    project = Project(name="Test Project", path=project_path)
     project.save_to_file()
 
     task = Task(
@@ -98,7 +98,7 @@ def test_task(tmp_path):
 def mock_task_from_id_disk_backed(test_task, monkeypatch):
     mock_func = Mock(return_value=test_task)
     monkeypatch.setattr(
-        "app.desktop.studio_server.finetune_api.task_from_id", mock_func
+        "src.finetune.v2.finetune_service.task_from_id", mock_func
     )
     return mock_func
 
@@ -145,8 +145,8 @@ def mock_built_in_models():
             family="family1",
             friendly_name="Model 1",
             providers=[
-                KilnModelProvider(name="groq", provider_finetune_id="ft_model1"),
-                KilnModelProvider(name="openai", provider_finetune_id="ft_model1_p2"),
+                KilnModelProvider(name=ModelProviderName.groq, provider_finetune_id="ft_model1"),
+                KilnModelProvider(name=ModelProviderName.openai, provider_finetune_id="ft_model1_p2"),
             ],
         ),
         KilnModel(
@@ -154,16 +154,16 @@ def mock_built_in_models():
             family="family2",
             friendly_name="Model 2",
             providers=[
-                KilnModelProvider(name="groq", provider_finetune_id="ft_model2"),
+                KilnModelProvider(name=ModelProviderName.groq, provider_finetune_id="ft_model2"),
                 KilnModelProvider(
-                    name="openai",
-                    provider_finetune_id=None,  # This one should be skipped
+                    name=ModelProviderName.openai,
+                    provider_finetune_id=None,
                 ),
             ],
         ),
     ]
     with unittest.mock.patch(
-        "app.desktop.studio_server.finetune_api.built_in_models", models
+        "src.finetune.v2.finetune_service.built_in_models", models
     ):
         yield models
 
@@ -177,7 +177,7 @@ def mock_provider_enabled():
     mock.side_effect = mock_enabled
 
     with unittest.mock.patch(
-        "app.desktop.studio_server.finetune_api.provider_enabled", mock
+        "src.finetune.v2.finetune_service.provider_enabled", mock
     ):
         yield mock
 
@@ -188,7 +188,7 @@ def mock_provider_name_from_id():
         return f"Provider {provider_id.replace('provider', '')}"
 
     with unittest.mock.patch(
-        "app.desktop.studio_server.finetune_api.provider_name_from_id", mock_name
+        "src.finetune.v2.finetune_service.provider_name_from_id", mock_name
     ):
         yield mock_name
 
@@ -199,7 +199,7 @@ async def test_get_finetune_providers(
 ):
     # Mock the Fireworks API call
     with patch(
-        "app.desktop.studio_server.finetune_api.fetch_fireworks_finetune_models",
+        "src.finetune.v2.finetune_service.FinetuneService.fetch_fireworks_finetune_models",
         new_callable=AsyncMock,
     ) as mock_fetch:
         # Set up mock return value with one model
@@ -265,7 +265,7 @@ def mock_finetune_registry():
     mock_registry = {"test_provider": mock_adapter}
 
     with unittest.mock.patch(
-        "app.desktop.studio_server.finetune_api.finetune_registry", mock_registry
+        "src.finetune.v2.finetune_service.finetune_registry", mock_registry
     ):
         yield mock_registry
 
@@ -329,7 +329,7 @@ def test_dataset_filter_ids(id, expect_error):
 
 
 def test_api_split_types_mapping():
-    from app.desktop.studio_server.finetune_api import api_split_types
+    from src.finetune.v2.finetune_model import api_split_types
 
     assert api_split_types[DatasetSplitType.TRAIN_TEST] == Train80Test20SplitDefinition
     assert (
@@ -440,7 +440,7 @@ def test_create_dataset_split_request_validation():
 
     # Test invalid dataset split type
     with pytest.raises(ValueError):
-        CreateDatasetSplitRequest(dataset_split_type="invalid_type", filter_id="all")
+        CreateDatasetSplitRequest.model_validate({"dataset_split_type": "invalid_type", "filter_id": "all"})
 
     # Test invalid filter type
     with pytest.raises(ValueError):
@@ -621,9 +621,7 @@ def test_create_finetune_request_validation():
 
     # Test invalid request (missing required field)
     with pytest.raises(ValueError):
-        CreateFinetuneRequest(
-            dataset_id="split1",  # Missing other required fields
-        )
+            CreateFinetuneRequest.model_validate({"dataset_id": "split1"})  # Missing other required fields
 
 
 def test_create_finetune_no_system_message(
@@ -684,7 +682,7 @@ def mock_prompt_builder():
     builder.build_prompt.return_value = "Generated system message"
 
     with unittest.mock.patch(
-        "app.desktop.studio_server.finetune_api.prompt_builder_from_id",
+        "src.finetune.v2.finetune_service.prompt_builder_from_id",
         return_value=builder,
     ) as mock:
         yield mock, builder
@@ -768,7 +766,7 @@ def mock_dataset_formatter():
     formatter.dump_to_file.return_value = Path("path/to/dataset.jsonl")
 
     with unittest.mock.patch(
-        "app.desktop.studio_server.finetune_api.DatasetFormatter",
+        "src.finetune.v2.finetune_service.DatasetFormatter",
         return_value=formatter,
     ) as mock_class:
         yield mock_class, formatter
@@ -982,7 +980,7 @@ async def test_get_finetunes_with_status_update(
             return "test_provider"
 
     monkeypatch.setattr(
-        "app.desktop.studio_server.finetune_api.ModelProviderName",
+        "src.finetune.v2.finetune_service.ModelProviderName",
         MockModelProviderName,
     )
 
@@ -1018,43 +1016,39 @@ async def test_get_finetunes_with_status_update(
     mock_adapter.status.assert_called_once()
 
 
-def test_thinking_instructions_non_cot_strategy():
-    """Test that non-COT strategies return None regardless of other parameters"""
+def test_thinking_instructions_from_request():
+    """Test the thinking_instructions_from_request method"""
     task = Mock(spec=Task)
-    result = thinking_instructions_from_request(
+    
+    # Test with non-COT strategy
+    result = FinetuneService.thinking_instructions_from_request(
         task=task,
         data_strategy=FinetuneDataStrategy.final_only,
         custom_thinking_instructions="custom instructions",
     )
     assert result is None
 
-
-def test_thinking_instructions_custom():
-    """Test that custom instructions are returned when provided"""
-    task = Mock(spec=Task)
+    # Test with custom instructions
     custom_instructions = "My custom thinking instructions"
-    result = thinking_instructions_from_request(
+    result = FinetuneService.thinking_instructions_from_request(
         task=task,
         data_strategy=FinetuneDataStrategy.final_and_intermediate,
         custom_thinking_instructions=custom_instructions,
     )
     assert result == custom_instructions
 
-
-@patch("app.desktop.studio_server.finetune_api.chain_of_thought_prompt")
-def test_thinking_instructions_default(mock_cot):
-    """Test that default chain of thought prompt is used when no custom instructions"""
-    task = Mock(spec=Task)
-    mock_cot.return_value = "Default COT instructions"
-
-    result = thinking_instructions_from_request(
-        task=task,
-        data_strategy=FinetuneDataStrategy.final_and_intermediate,
-        custom_thinking_instructions=None,
-    )
-
-    mock_cot.assert_called_once_with(task)
-    assert result == "Default COT instructions"
+    # Test with default chain of thought prompt
+    with patch("src.finetune.v2.finetune_service.chain_of_thought_prompt") as mock_cot:
+        mock_cot.return_value = "Default COT instructions"
+        
+        result = FinetuneService.thinking_instructions_from_request(
+            task=task,
+            data_strategy=FinetuneDataStrategy.final_and_intermediate,
+            custom_thinking_instructions=None,
+        )
+        
+        mock_cot.assert_called_once_with(task)
+        assert result == "Default COT instructions"
 
 
 async def test_update_finetune(client, mock_task_from_id_disk_backed, test_task):
@@ -1100,7 +1094,7 @@ def mock_httpx_client():
 
 @pytest.fixture
 def mock_config():
-    with patch("app.desktop.studio_server.finetune_api.Config") as mock_config:
+    with patch("src.finetune.v2.finetune_service.Config") as mock_config:
         config_instance = Mock()
         mock_config.shared.return_value = config_instance
         yield config_instance
@@ -1111,7 +1105,7 @@ async def test_fetch_fireworks_finetune_models_no_api_key(mock_config):
     """Test that an empty list is returned when no API key is available"""
     mock_config.fireworks_api_key = None
 
-    result = await fetch_fireworks_finetune_models()
+    result = await FinetuneService.fetch_fireworks_finetune_models()
 
     assert result == []
     assert isinstance(result, list)
@@ -1160,7 +1154,7 @@ async def test_fetch_fireworks_finetune_models_success(mock_config, mock_httpx_c
     # Set up the client to return the responses in sequence
     mock_httpx_client.get.side_effect = [first_response, second_response]
 
-    result = await fetch_fireworks_finetune_models()
+    result = await FinetuneService.fetch_fireworks_finetune_models()
 
     # Verify the API was called with the correct parameters
     assert mock_httpx_client.get.call_count == 2
@@ -1215,7 +1209,7 @@ async def test_fetch_fireworks_finetune_models_empty_response(
 
     mock_httpx_client.get.return_value = response
 
-    result = await fetch_fireworks_finetune_models()
+    result = await FinetuneService.fetch_fireworks_finetune_models()
 
     assert result == []
     mock_httpx_client.get.assert_called_once()
@@ -1228,7 +1222,6 @@ async def test_fetch_fireworks_finetune_models_invalid_response(
     """Test handling of invalid response format from API"""
     mock_config.fireworks_api_key = "test-api-key"
 
-    # Setup mock response with missing models key
     response = Mock()
     response.json.return_value = {"not_models": []}
     response.status_code = 200
@@ -1238,7 +1231,7 @@ async def test_fetch_fireworks_finetune_models_invalid_response(
 
     # Function should raise ValueError for invalid response
     with pytest.raises(ValueError) as excinfo:
-        await fetch_fireworks_finetune_models()
+        await FinetuneService.fetch_fireworks_finetune_models()
 
     assert "Invalid response from Fireworks" in str(excinfo.value)
     assert "[200]" in str(excinfo.value)  # Should include status code
@@ -1257,6 +1250,9 @@ async def test_fetch_fireworks_finetune_models_http_error(
 
     # Should propagate the error
     with pytest.raises(httpx.HTTPError):
-        await fetch_fireworks_finetune_models()
+        await FinetuneService.fetch_fireworks_finetune_models()
 
     mock_httpx_client.get.assert_called_once()
+
+
+
