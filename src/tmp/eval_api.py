@@ -32,12 +32,11 @@ from kiln_ai.utils.name_generator import generate_memorable_name
 from kiln_server.task_api import task_from_id
 from pydantic import BaseModel
 
-from .correlation_calculator import (
+from ..utils.correlation_calculator import (
     CorrelationCalculator,
     CorrelationResult,
     CorrelationScore,
 )
-
 
 def eval_from_id(project_id: str, task_id: str, eval_id: str) -> Eval:
     task = task_from_id(project_id, task_id)

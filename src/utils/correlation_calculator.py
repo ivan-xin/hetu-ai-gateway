@@ -21,7 +21,7 @@ class CorrelationResult:
     mean_normalized_squared_error: float
     spearman_correlation: float | None
     pearson_correlation: float | None
-    kendalltau_correlation: float | None
+    # kendalltau_correlation: float | None
 
 
 class CorrelationCalculator:
@@ -42,7 +42,7 @@ class CorrelationCalculator:
             mean_normalized_squared_error=self.calculate_mean_normalized_squared_error(),
             spearman_correlation=self.calculate_spearman_correlation(),
             pearson_correlation=self.calculate_pearson_correlation(),
-            kendalltau_correlation=self.calculate_kendalltau_correlation(),
+            # kendalltau_correlation=self.calculate_kendalltau_correlation(),
         )
 
     def calculate_mean_absolute_error(self) -> float:
@@ -97,14 +97,14 @@ class CorrelationCalculator:
             return None
         return result.correlation
 
-    def calculate_kendalltau_correlation(self) -> float | None:
-        if len(self.scores) < 2:
-            # If there is only one pair, no correlation
-            return None
-        x = [score.measured_score for score in self.scores]
-        y = [score.human_score for score in self.scores]
-        result = stats.kendalltau(x, y)
-        if math.isnan(result.correlation):
-            # Very small samples may have a NaN result (unknown correlation)
-            return None
-        return result.correlation
+    # def calculate_kendalltau_correlation(self) -> float | None:
+    #     if len(self.scores) < 2:
+    #         # If there is only one pair, no correlation
+    #         return None
+    #     x = [score.measured_score for score in self.scores]
+    #     y = [score.human_score for score in self.scores]
+    #     result = stats.kendalltau(x, y)
+    #     if math.isnan(result.correlation):
+    #         # Very small samples may have a NaN result (unknown correlation)
+    #         return None
+    #     return result.correlation
