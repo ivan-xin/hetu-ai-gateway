@@ -16,7 +16,7 @@ from kiln_ai.datamodel import (
     DatasetSplit,
     Finetune,
 )
-from src.finetune.v2.finetune_service_ import FinetuneService
+from src.finetune.v2.finetune_service import FinetuneService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
