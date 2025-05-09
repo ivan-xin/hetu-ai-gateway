@@ -3,8 +3,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import AppConfig, setup_kiln_config
-from .finetune.v1.finetune_api import router as finetune_router
-
+from .finetune.v2.finetune_api import router as finetune_router
+from .project.project_api import router as project_router
 # 初始化 Kiln 配置
 setup_kiln_config()
 
@@ -26,6 +26,7 @@ app.add_middleware(
 
 # 注册路由
 app.include_router(finetune_router)
+app.include_router(project_router)
 
 # 异常处理
 @app.exception_handler(Exception)

@@ -19,25 +19,26 @@ from kiln_ai.datamodel import (
 from src.finetune.v2.finetune_service import FinetuneService
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+# router = APIRouter()
+router = APIRouter(prefix="/api/finetune", tags=["finetune"])
 
-@router.get("/api/projects/{project_id}/tasks/{task_id}/dataset_splits")
+@router.get("/projects/{project_id}/tasks/{task_id}/dataset_splits")
 async def dataset_splits(project_id: str, task_id: str) -> list[DatasetSplit]:
     return await FinetuneService.get_dataset_splits(project_id, task_id)
 
-@router.get("/api/projects/{project_id}/tasks/{task_id}/finetunes")
+@router.get("/projects/{project_id}/tasks/{task_id}/finetunes")
 async def finetunes(
     project_id: str, task_id: str, update_status: bool = False
 ) -> list[Finetune]:
     return await FinetuneService.get_finetunes(project_id, task_id, update_status)
 
-@router.get("/api/projects/{project_id}/tasks/{task_id}/finetunes/{finetune_id}")
+@router.get("/projects/{project_id}/tasks/{task_id}/finetunes/{finetune_id}")
 async def finetune(
     project_id: str, task_id: str, finetune_id: str
 ) -> FinetuneWithStatus:
     return await FinetuneService.get_finetune(project_id, task_id, finetune_id)
 
-@router.patch("/api/projects/{project_id}/tasks/{task_id}/finetunes/{finetune_id}")
+@router.patch("/projects/{project_id}/tasks/{task_id}/finetunes/{finetune_id}")
 async def update_finetune(
     project_id: str,
     task_id: str,
@@ -46,29 +47,29 @@ async def update_finetune(
 ) -> Finetune:
     return await FinetuneService.update_finetune(project_id, task_id, finetune_id, request)
 
-@router.get("/api/finetune_providers")
+@router.get("/finetune_providers")
 async def finetune_providers() -> list[FinetuneProvider]:
     return await FinetuneService.get_finetune_providers()
 
-@router.get("/api/finetune/hyperparameters/{provider_id}")
+@router.get("/hyperparameters/{provider_id}")
 async def finetune_hyperparameters(
     provider_id: str,
 ) -> list[FineTuneParameter]:
     return await FinetuneService.get_finetune_hyperparameters(provider_id)
 
-@router.post("/api/projects/{project_id}/tasks/{task_id}/dataset_splits")
+@router.post("/projects/{project_id}/tasks/{task_id}/dataset_splits")
 async def create_dataset_split(
     project_id: str, task_id: str, request: CreateDatasetSplitRequest
 ) -> DatasetSplit:
     return await FinetuneService.create_dataset_split(project_id, task_id, request)
 
-@router.post("/api/projects/{project_id}/tasks/{task_id}/finetunes")
+@router.post("/projects/{project_id}/tasks/{task_id}/finetunes")
 async def create_finetune(
     project_id: str, task_id: str, request: CreateFinetuneRequest
 ) -> Finetune:
     return await FinetuneService.create_finetune(project_id, task_id, request)
 
-@router.get("/api/download_dataset_jsonl")
+@router.get("/download_dataset_jsonl")
 async def download_dataset_jsonl(
     project_id: str,
     task_id: str,

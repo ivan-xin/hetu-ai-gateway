@@ -24,11 +24,11 @@ def setup_kiln_config():
     kiln_config.together_api_key = os.getenv("TOGETHER_API_KEY", "")
     
     # Fireworks AI (用于微调)
-    kiln_config.fireworks_api_key = os.getenv("FIREWORKS_API_KEY", "")
+    # kiln_config.fireworks_api_key = os.getenv("FIREWORKS_API_KEY", "")
     
     # 其他可能需要的提供商
-    kiln_config.openai_api_key = os.getenv("OPENAI_API_KEY", "")
-    kiln_config.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    # kiln_config.openai_api_key = os.getenv("OPENAI_API_KEY", "")
+    # kiln_config.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
     
     # 设置自动保存运行结果
     kiln_config.autosave_runs = True
