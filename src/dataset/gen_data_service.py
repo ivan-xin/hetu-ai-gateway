@@ -1,4 +1,10 @@
+# import litellm
+# litellm.drop_params = True
 import logging
+import json
+import csv
+import io
+import asyncio
 from typing import List, Optional, Dict, Any
 
 from kiln_ai.adapters.adapter_registry import adapter_for_task
@@ -13,6 +19,8 @@ from kiln_ai.adapters.model_adapters.base_adapter import AdapterConfig
 from kiln_ai.datamodel import DataSource, DataSourceType, PromptId, TaskRun
 from kiln_server.run_api import model_provider_from_string
 from kiln_server.task_api import task_from_id
+
+from .gen_data_model import DataGenSaveSamplesApiInput, DataGenBatchSaveSamplesApiInput
 
 logger = logging.getLogger(__name__)
 
@@ -42,12 +50,13 @@ class DataGenService:
             existing_topics=existing_topics,
         )
 
+
         adapter = adapter_for_task(
             categories_task,
             model_name=model_name,
             provider=model_provider_from_string(provider),
         )
-
+        
         categories_run = await adapter.invoke(task_input.model_dump())
         return categories_run
     
@@ -136,6 +145,135 @@ class DataGenService:
 
         run.save_to_file()
         return run
+    
+    async def save_samples_batch(
+        self,
+        project_id: str,
+        task_id: str,
+        batch: DataGenBatchSaveSamplesApiInput,
+    ) -> List[TaskRun]:
+        """批量保存样本"""
+        results = []
+        
+        for sample in batch.samples:
+            try:
+                run = await self.save_sample(
+                    project_id=project_id,
+                    task_id=task_id,
+                    input_data=sample.input,
+                    topic_path=sample.topic_path,
+                    input_model_name=sample.input_model_name,
+                    input_provider=sample.input_provider,
+                    output_model_name=sample.output_model_name,
+                    output_provider=sample.output_provider,
+                    prompt_method=sample.prompt_method,
+                    human_guidance=sample.human_guidance,
+                    session_id=batch.session_id,
+                )
+                results.append(run)
+            except Exception as e:
+                logger.error(f"Error saving sample: {e}")
+                # 继续处理其他样本
+        
+        return results
+    
+    async def process_samples_in_background(
+        self,
+        project_id: str,
+        task_id: str,
+        batch: DataGenBatchSaveSamplesApiInput,
+    ) -> None:
+        """在后台处理样本，分批处理大量数据"""
+        # 分批处理，每批100个样本
+        chunk_size = 100
+        for i in range(0, len(batch.samples), chunk_size):
+            chunk = batch.samples[i:i+chunk_size]
+            chunk_batch = DataGenBatchSaveSamplesApiInput(
+                samples=chunk,
+                session_id=batch.session_id
+            )
+            
+            # 处理这一批
+            await self.save_samples_batch(project_id, task_id, chunk_batch)
+            
+            # 小延迟，防止系统过载
+            await asyncio.sleep(0.1)
+    
+    async def import_from_csv(
+        self,
+        project_id: str,
+        task_id: str,
+        csv_content: str,
+        input_model_name: str,
+        input_provider: str,
+        output_model_name: str,
+        output_provider: str,
+        prompt_method: PromptId,
+        session_id: Optional[str] = None,
+    ) -> DataGenBatchSaveSamplesApiInput:
+        """从CSV内容导入样本"""
+        reader = csv.DictReader(io.StringIO(csv_content))
+        samples = []
+        
+        for row in reader:
+            if 'input' not in row or 'output' not in row:
+                raise ValueError("CSV必须包含'input'和'output'列")
+            
+            # 为每行创建一个样本
+            sample = DataGenSaveSamplesApiInput(
+                input=row['input'],
+                topic_path=row.get('topic_path', '').split('>>>>>') if row.get('topic_path') else [],
+                input_model_name=input_model_name,
+                input_provider=input_provider,
+                output_model_name=output_model_name,
+                output_provider=output_provider,
+                prompt_method=prompt_method,
+                human_guidance=row.get('human_guidance')
+            )
+            samples.append(sample)
+        
+        return DataGenBatchSaveSamplesApiInput(samples=samples, session_id=session_id)
+    
+    async def import_from_jsonl(
+        self,
+        project_id: str,
+        task_id: str,
+        jsonl_content: str,
+        input_model_name: str,
+        input_provider: str,
+        output_model_name: str,
+        output_provider: str,
+        prompt_method: PromptId,
+        session_id: Optional[str] = None,
+    ) -> DataGenBatchSaveSamplesApiInput:
+        """从JSONL内容导入样本"""
+        samples = []
+        
+        for line in jsonl_content.strip().split('\n'):
+            if not line.strip():
+                continue
+                
+            try:
+                data = json.loads(line)
+                if 'input' not in data:
+                    raise ValueError("每行JSONL必须包含'input'字段")
+                
+                # 为每行创建一个样本
+                sample = DataGenSaveSamplesApiInput(
+                    input=data['input'],
+                    topic_path=data.get('topic_path', []),
+                    input_model_name=input_model_name,
+                    input_provider=input_provider,
+                    output_model_name=output_model_name,
+                    output_provider=output_provider,
+                    prompt_method=prompt_method,
+                    human_guidance=data.get('human_guidance')
+                )
+                samples.append(sample)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"无效的JSON行: {line}. 错误: {str(e)}")
+        
+        return DataGenBatchSaveSamplesApiInput(samples=samples, session_id=session_id)
     
     def topic_path_to_string(self, topic_path: List[str]) -> Optional[str]:
         """将主题路径列表转换为字符串"""
