@@ -170,6 +170,7 @@ class DataGenService:
                     human_guidance=sample.human_guidance,
                     session_id=batch.session_id,
                 )
+                print(f"results sample: {len(results)}")
                 results.append(run)
             except Exception as e:
                 logger.error(f"Error saving sample: {e}")

@@ -2,19 +2,19 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from .config import AppConfig, setup_kiln_config
+from .config import AppConfig, setup_hetu_config
 from .finetune.v2.finetune_api import router as finetune_router
 from .project.project_api import router as project_router
 from .task.task_api import router as task_router
 from .dataset.gen_data_api import router as dataset_router
 
 # 初始化 Kiln 配置
-setup_kiln_config()
+setup_hetu_config()
 
 # 创建 FastAPI 应用
 app = FastAPI(
-    title="Kiln Fine-Tuning Service",
-    description="A service for fine-tuning language models using Kiln-AI",
+    title="Hetu Fine-Tuning Service",
+    description="A service for fine-tuning language models using Hetu-AI",
     version="0.1.0"
 )
 
