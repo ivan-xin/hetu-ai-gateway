@@ -96,6 +96,10 @@ class FinetuneService:
         provider_enum = ModelProviderName[finetune.provider]
         finetune_adapter = finetune_registry[provider_enum]
         status = await finetune_adapter(finetune).status()
+        if status.status == FineTuneStatusType.completed and not finetune.fine_tune_model_id:
+            logger.warning(f"Error fetching fine_tune_model_id")
+            
+            pass
         return FinetuneWithStatus(finetune=finetune, status=status)
 
     @staticmethod

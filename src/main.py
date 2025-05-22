@@ -7,9 +7,11 @@ from .finetune.v2.finetune_api import router as finetune_router
 from .project.project_api import router as project_router
 from .task.task_api import router as task_router
 from .dataset.gen_data_api import router as dataset_router
+from .finetune.custom_adapters.register import register_custom_adapters
 
 # 初始化 Kiln 配置
 setup_hetu_config()
+register_custom_adapters()
 
 # 创建 FastAPI 应用
 app = FastAPI(
